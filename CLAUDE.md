@@ -50,7 +50,7 @@ XGBoost scoring  ──►  scored-txns topic
 Daily Airflow DAG
     • PSI on model score (band-wise read, not just aggregate)
     • CSI per feature vs frozen baseline
-    • FPR, fairness slices
+    • precision / recall / FPR, fairness gaps
     │
     ▼
 Postgres (metrics + audit log)
@@ -80,8 +80,9 @@ Docker  ──►  GCP Cloud Run (public URL)
 
 ## 5. Data policy
 
-- **Public datasets only.** IEEE-CIS, Bank Account Fraud Suite (fairness),
-  PaySim (scale).
+- **Public datasets only.** IEEE-CIS (primary stream), Bank Account Fraud Suite
+  (protected attributes → fairness/bias audit), PaySim (optional — scale and
+  replay).
 - **Real bank data is confidential and is never used.** State this in the
   README.
 - `data/` and `models/` are gitignored. Never commit raw data, derived
@@ -93,9 +94,13 @@ Docker  ──►  GCP Cloud Run (public URL)
 
 - **SR 26-2** — primary, current guidance.
 - **SR 11-7** — historical reference; cite explicitly as superseded.
-- **EU AI Act**, high-risk obligations.
+- **EU AI Act** — high-risk obligations (full enforcement Aug 2026); the
+  fairness/bias angle, powered by the Bank Account Fraud Suite's protected
+  attributes.
 - **NIST AI RMF.**
 - A **synthetic model-validation report** (clearly labeled synthetic).
+
+Retrieval returns `doc:section` citations so every drafted claim is traceable.
 
 ## 7. Conventions — enforce throughout
 
@@ -106,21 +111,33 @@ Docker  ──►  GCP Cloud Run (public URL)
 - Bands: `<0.10` stable, `0.10–0.25` monitor, `>0.25` investigate.
 - Read PSI **band-wise** (per-bin direction), not just the aggregate — a
   middling aggregate can hide a dangerous shift at the decision boundary.
+- Also track model **health metrics** daily: precision, recall, FPR, and
+  **fairness gaps** across the protected-attribute slices.
 
 ### Model code
 
 - **Train and serve features must stay identical** — exactly one shared feature
   module, imported by both paths. No parallel implementations.
+- The XGBoost baseline is **frozen and versioned**. Every score and every drift
+  reading is attributable to a specific model version in the audit log.
 
 ### Agent outputs
 
 - Every agent output translates drift into a **business implication**: name the
-  cost type (false declines / fraud losses / decision instability), a rough
-  size, and the stakeholder to route to.
-- Every agent decision **cites its policy source** (corpus document + section)
-  and writes to the immutable audit log.
+  cost type, a rough size, and the stakeholder to route to. The Drafter routes
+  by the **direction of the shift** (read band-wise):
+
+  | Shift | Mechanism | Cost type | Route to |
+  | --- | --- | --- | --- |
+  | **High-side** | model over-flagging | **false declines** (lost revenue, friction, investigation load) | Product / Sales / CX |
+  | **Low-side** | under-detection | **fraud losses + regulatory exposure** | Risk / Finance / Legal |
+  | **Mid / threshold** | unstable at the decision boundary | **decision instability** | Ops / Finance planning |
+
+- Every agent decision **cites its policy source** (`doc:section`) and writes to
+  the immutable audit log.
 - **Nothing side-effecting happens without human approval.** The human gate is
-  not optional, and not a checkbox the agent can flip.
+  not optional, and not a checkbox the agent can flip. **Exceptions escalate**
+  rather than being silently swallowed.
 
 ### Workflow
 
@@ -144,7 +161,14 @@ infra/       # Docker, Compose, Cloud Run deploy, IaC
 docs/        # research/, ADRs, runbooks, governance notes
 ```
 
-## 9. Out of scope (for now)
+## 9. Honest scope and limits
+
+Sentinel is a **prototype, not production**. On public/synthetic data, results
+are **illustrative, not deployable**. LLM drafts are RAG-grounded with citations
+to limit fabrication. Sentinel **assists** a human model-risk manager — it never
+self-heals or acts autonomously.
+
+Out of scope (for now):
 
 - Real bank data, scraped PII, or any non-public source.
 - Auto-applied actions from agents.
