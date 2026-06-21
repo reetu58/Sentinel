@@ -1,0 +1,7 @@
+# Sentinel pipeline (Phase 1 — streaming spine) Python dependencies.
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.4
+xgboost>=2.0
+confluent-kafka>=2.3
+pytest>=8.0

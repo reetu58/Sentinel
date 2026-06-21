@@ -1,0 +1,106 @@
+# --- Data, models, and any potentially sensitive artifacts ---
+# Sentinel uses PUBLIC datasets only, but we still never commit raw data or
+# trained model binaries. Re-derive them from documented sources.
+data/
+models/
+*.csv
+*.parquet
+*.feather
+*.tsv
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.onnx
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# --- Secrets / credentials ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+credentials.json
+service-account*.json
+gcp-key*.json
+*secret*
+*credential*
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+*.ipynb_meta
+
+# --- Node / React frontend ---
+node_modules/
+frontend/build/
+frontend/dist/
+frontend/.next/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# --- Airflow ---
+airflow.cfg
+airflow.db
+airflow-webserver.pid
+logs/
+plugins/__pycache__/
+
+# --- Docker / infra ---
+*.tar
+*.tar.gz
+.docker/
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# --- Local scratch ---
+scratch/
+tmp/
+.tmp/
