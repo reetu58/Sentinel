@@ -1,7 +1,9 @@
-# Sentinel pipeline (Phase 1 — streaming spine) Python dependencies.
+# Sentinel pipeline dependencies (Phases 1 + 2).
 pandas>=2.2
 numpy>=1.26
 scikit-learn>=1.4
 xgboost>=2.0
 confluent-kafka>=2.3
+# Phase 2 — Postgres connector for the metrics + audit log layer.
+psycopg[binary]>=3.2
 pytest>=8.0

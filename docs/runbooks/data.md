@@ -35,8 +35,19 @@ python -m pipeline.sample_paysim --rows 20000 --out data/paysim.csv
 This is **fake, illustrative data** — plausible ranges and a learnable
 fraud signal, resembling no real transactions. The unit tests use it directly.
 
-## Later phases
+## Bank Account Fraud Suite (BAF) — Phase 2 fairness audit
 
-- **Bank Account Fraud Suite (NeurIPS 2022)** — Phase 2, for the fairness/bias
-  audit (ships protected attributes; the EU AI Act angle).
+The fairness/bias audit (`pipeline.baf_fairness`) reads BAF from
+`data/baf.csv`. Public dataset, never committed.
+
+1. Download from the official NeurIPS 2022 release:
+   <https://github.com/feedzai/bank-account-fraud>
+2. Place the CSV at `data/baf.csv` (override with the `BAF_CSV` env var).
+
+Default slice column is `customer_age` (banded into `<25 / 25-34 / 35-49 /
+50-64 / 65+`); other protected attributes (`employment_status`,
+`housing_status`, `income`) can be selected with `--slice`.
+
+## Other public datasets
+
 - **IEEE-CIS Fraud Detection** — optional additional real-world stream.
