@@ -34,6 +34,7 @@ from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
 from . import config
+from .baseline import BaselineSnapshot, freeze_baseline
 from .features import FEATURE_COLUMNS, LABEL, build_features
 
 
@@ -127,10 +128,25 @@ def freeze(model: XGBClassifier, metrics: dict, out_path: Path, *, version: str)
     print(f"\nFrozen model -> {out_path}  (version={version})")
 
 
+def freeze_reference_baseline(
+    df: pd.DataFrame, model: XGBClassifier, *, version: str, out_path: Path
+) -> BaselineSnapshot:
+    """Capture the score + per-feature reference distributions for drift detection.
+
+    This is the Phase 2 hook that makes daily PSI/CSI meaningful: without a
+    frozen reference, "drift" is undefined.
+    """
+    snapshot = freeze_baseline(df, model=model, model_version=version)
+    snapshot.save(out_path)
+    print(f"Frozen baseline -> {out_path}  (model_version={version})")
+    return snapshot
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train the PaySim XGBoost baseline.")
     parser.add_argument("--data", type=Path, default=config.DATA_PATH)
     parser.add_argument("--out", type=Path, default=config.MODEL_PATH)
+    parser.add_argument("--baseline-out", type=Path, default=config.BASELINE_PATH)
     parser.add_argument("--threshold", type=float, default=config.DECISION_THRESHOLD)
     parser.add_argument("--version", type=str, default="v1")
     parser.add_argument("--seed", type=int, default=42)
@@ -139,6 +155,7 @@ def main() -> None:
     df = load_dataset(args.data)
     model, metrics = train(df, threshold=args.threshold, seed=args.seed)
     freeze(model, metrics, args.out, version=args.version)
+    freeze_reference_baseline(df, model, version=args.version, out_path=args.baseline_out)
 
 
 if __name__ == "__main__":

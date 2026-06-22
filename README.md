@@ -10,6 +10,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![Data: public only](https://img.shields.io/badge/data-public%20only-brightgreen.svg)](docs/runbooks/data.md)
 [![Phase 1: streaming spine](https://img.shields.io/badge/phase%201-streaming%20spine%20✓-success.svg)](#-project-status)
+[![Phase 2: drift + fairness](https://img.shields.io/badge/phase%202-drift%20+%20fairness%20✓-success.svg)](#-project-status)
 [![Human-in-the-loop](https://img.shields.io/badge/actions-human%20approved-orange.svg)](#-design-principles)
 
 </div>
@@ -92,7 +93,7 @@ for what actually runs today.
 | Phase | Scope | Status |
 | --- | --- | --- |
 | **1 — Streaming spine** | Redpanda + Postgres via Compose · shared feature module · XGBoost baseline (PR-AUC, imbalance-aware) · producer → `transactions` · consumer → `scored-txns` with label | ✅ **Built** |
-| **2 — Daily drift & health** | Airflow DAG: band-wise PSI, per-feature CSI, precision/recall/FPR, fairness slices (Bank Account Fraud Suite) → Postgres | ⬜ Planned |
+| **2 — Daily drift, trend & fairness** | Frozen reference baseline · band-wise PSI + per-feature CSI + precision/recall/FPR · sustained-rise trend detector (early warning before RED) · BAF fairness audit (per-slice FPR + approval gaps) · Postgres schema + sink · daily CLI + Airflow DAG | ✅ **Built** |
 | **3 — Agents + RAG** | LangGraph Monitor → Investigator (RAG over the governance corpus, `doc:section` citations) → Drafter → human gate | ⬜ Planned |
 | **4 — API + dashboard** | FastAPI service, immutable audit log, approve/reject endpoints · React dashboard | ⬜ Planned |
 | **5 — Deploy** | Docker → GCP Cloud Run, public URL | ⬜ Planned |
@@ -150,6 +151,39 @@ python -m pytest pipeline/tests/ -q
 
 ---
 
+## ⚡ Phase 2 — daily drift, trend & fairness
+
+Once Phase 1 is running and `scored-txns` is producing events, layer in the
+governance metrics:
+
+```bash
+# 1. sink scored events into Postgres for daily-batch querying
+python -m pipeline.sink_postgres &
+
+# 2. compute one day's metrics (PSI / CSI / health / trend) and write to Postgres
+python -m pipeline.daily_drift --date 2026-06-21
+
+# 3. fairness audit on the Bank Account Fraud Suite (separate runnable)
+#    place the CSV at data/baf.csv first (public, never committed; see data.md)
+python -m pipeline.baf_fairness --slice customer_age
+```
+
+Each daily metric row carries the **semantic band** (`stable`/`monitor`/`investigate`),
+the **visual color** (`GREEN`/`AMBER`/`RED`), the **direction** of the score
+shift (`high`/`low`/`mid`/`stable` — what the Phase 3 Drafter agent will route
+on), and a **trend status** flagging a sustained PSI creep *before* it crosses
+the RED threshold. The band-wise per-bin breakdown (expected % / actual % /
+signed delta / contribution) lands in `psi_bins`, joined to `daily_metrics` by
+foreign key, so the Phase 4 dashboard can render it directly.
+
+The Phase 1 CLI is the primary entry point; an Airflow DAG
+(`pipeline/dags/daily_drift_dag.py`) is checked in as a thin wrapper and can
+be enabled with `docker compose --profile airflow up -d` (then
+<http://localhost:8081>). See [`docs/runbooks/drift.md`](docs/runbooks/drift.md)
+for the full schema, sample queries, and tuning knobs.
+
+---
+
 ## 🧭 Design principles
 
 These are enforced, not aspirational — see [`CLAUDE.md`](CLAUDE.md) for the full contract.
@@ -195,15 +229,28 @@ committed and must be re-derived from the documented public sources
 ## 🗂️ Repository layout
 
 ```
-pipeline/    # ingestion, shared feature module, scoring, training, drift jobs, DAGs
+pipeline/
+  features.py        # SINGLE shared feature module (train & serve)
+  train_model.py     # XGBoost baseline + frozen reference baseline snapshot
+  producer.py        # PaySim -> transactions topic
+  consumer.py        # transactions -> scored-txns (with label)
+  scoring.py         # broker-free serving path + schema-drift guard
+  drift.py           # PSI / CSI / banding / direction inference
+  health.py          # precision / recall / FPR + per-slice fairness gaps
+  baseline.py        # frozen reference distribution captured at training
+  trend.py           # sustained-rise early warning
+  sink_postgres.py   # scored-txns -> Postgres
+  daily_drift.py     # daily governance metrics CLI
+  baf_fairness.py    # BAF fairness audit (separate runnable)
+  dags/              # Airflow DAGs (thin wrappers over the CLIs)
 agents/      # LangGraph agents (Monitor, Investigator, Drafter, human gate)   [Phase 3]
 rag/         # corpus loaders, indexers, retrievers, citation plumbing          [Phase 3]
 backend/     # FastAPI service, audit log, human-gate endpoints                 [Phase 4]
 frontend/    # React dashboard                                                  [Phase 4]
-infra/       # Docker Compose, Cloud Run deploy
-docs/        # research brief, ADRs, runbooks, governance notes
+infra/       # Docker Compose, Postgres init.sql, Cloud Run deploy
+docs/        # research brief, ADRs, runbooks (data, drift), governance notes
 data/        # gitignored — public datasets, locally derived
-models/      # gitignored — trained artifacts, locally derived
+models/      # gitignored — trained artifacts + baseline sidecar, locally derived
 ```
 
 ---

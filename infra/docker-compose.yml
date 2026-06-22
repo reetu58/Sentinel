@@ -1,11 +1,16 @@
-# Sentinel local infrastructure — the Phase 1 streaming spine.
+# Sentinel local infrastructure — streaming spine (Phase 1) + governance
+# scheduler (Phase 2).
 #
-#   docker compose -f infra/docker-compose.yml up -d
+#   docker compose -f infra/docker-compose.yml up -d                 # phase 1
+#   docker compose -f infra/docker-compose.yml --profile airflow up -d  # + phase 2
 #
 # Brings up:
 #   - redpanda          Kafka-compatible broker        localhost:9092
 #   - redpanda-console  web UI for topics/messages     http://localhost:8080
 #   - postgres          metrics + immutable audit log  localhost:5432
+#                       (init.sql is applied on first boot)
+#   - airflow           daily drift DAG scheduler      http://localhost:8081
+#                       (opt-in via --profile airflow; heavy, ~1.5 GB image)
 #
 # Public data only; no secrets baked in. Override Postgres creds via a local
 # .env (see .env.example) before anything real.
@@ -64,7 +69,43 @@ services:
       retries: 10
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      # Applied on FIRST boot only — subsequent restarts skip it. Re-applying
+      # is idempotent (every CREATE is IF NOT EXISTS) if you exec into it.
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/01-sentinel-init.sql:ro
+
+  # Airflow — daily drift DAG scheduler. Opt-in (heavy image); enable with
+  # `--profile airflow`. Uses `airflow standalone` so scheduler + webserver
+  # run in one container, with its metadata in the same Postgres on schema
+  # `airflow` (kept isolated from Sentinel's tables).
+  airflow:
+    image: apache/airflow:2.10.4-python3.11
+    container_name: sentinel-airflow
+    profiles: ["airflow"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: >-
+        postgresql+psycopg2://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:-sentinel}@postgres/${POSTGRES_DB:-sentinel}
+      # Make the pipeline package importable inside the Airflow container.
+      PYTHONPATH: /opt/airflow:/opt/airflow/pipeline
+      # Sentinel runtime config (mirrors .env.example).
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:29092
+      POSTGRES_DSN: postgresql://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:-sentinel}@postgres:5432/${POSTGRES_DB:-sentinel}
+    ports:
+      - "8081:8080"
+    volumes:
+      - ../pipeline/dags:/opt/airflow/dags:ro
+      - ../pipeline:/opt/airflow/pipeline:ro
+      - ../models:/opt/airflow/models:ro
+      - ../data:/opt/airflow/data:ro
+      - airflow-logs:/opt/airflow/logs
+    command: ["bash", "-c", "pip install --user confluent-kafka xgboost && airflow standalone"]
 
 volumes:
   redpanda-data:
   postgres-data:
+  airflow-logs:
