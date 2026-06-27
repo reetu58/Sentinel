@@ -11,6 +11,7 @@
 [![Data: public only](https://img.shields.io/badge/data-public%20only-brightgreen.svg)](docs/runbooks/data.md)
 [![Phase 1: streaming spine](https://img.shields.io/badge/phase%201-streaming%20spine%20✓-success.svg)](#-project-status)
 [![Phase 2: drift + fairness](https://img.shields.io/badge/phase%202-drift%20+%20fairness%20✓-success.svg)](#-project-status)
+[![Phase 3: agents + RAG](https://img.shields.io/badge/phase%203-agents%20+%20RAG%20✓-success.svg)](#-project-status)
 [![Human-in-the-loop](https://img.shields.io/badge/actions-human%20approved-orange.svg)](#-design-principles)
 
 </div>
@@ -94,8 +95,8 @@ for what actually runs today.
 | --- | --- | --- |
 | **1 — Streaming spine** | Redpanda + Postgres via Compose · shared feature module · XGBoost baseline (PR-AUC, imbalance-aware) · producer → `transactions` · consumer → `scored-txns` with label | ✅ **Built** |
 | **2 — Daily drift, trend & fairness** | Frozen reference baseline · band-wise PSI + per-feature CSI + precision/recall/FPR · sustained-rise trend detector (early warning before RED) · BAF fairness audit (per-slice FPR + approval gaps) · Postgres schema + sink · daily CLI + Airflow DAG | ✅ **Built** |
-| **3 — Agents + RAG** | LangGraph Monitor → Investigator (RAG over the governance corpus, `doc:section` citations) → Drafter → human gate | ⬜ Planned |
-| **4 — API + dashboard** | FastAPI service, immutable audit log, approve/reject endpoints · React dashboard | ⬜ Planned |
+| **3 — Agents + RAG** | Haystack BM25 RAG over the governance corpus (`doc:section` citations) · LangGraph Monitor → Investigator → Drafter → human gate (interrupt-based pause) · thin Anthropic/OpenAI/offline LLM router · immutable append-only audit log (agent runs, memos, decisions) | ✅ **Built** |
+| **4 — API + dashboard** | FastAPI service, audit-log + approve/reject endpoints · React dashboard | ⬜ Planned |
 | **5 — Deploy** | Docker → GCP Cloud Run, public URL | ⬜ Planned |
 
 ---
@@ -184,6 +185,47 @@ for the full schema, sample queries, and tuning knobs.
 
 ---
 
+## ⚡ Phase 3 — agents, RAG & the human gate
+
+The copilot turns a drift breach into a cited, human-gated memo. It runs fully
+**offline** for demos/CI (deterministic composer + BM25 retrieval + JSONL
+audit) — no API key or database required:
+
+```bash
+python -m agents.run \
+  --breach-file agents/tests/fixtures/breach_red.json \
+  --corpus-dir rag/tests/fixtures/governance \
+  --offline \
+  --decision approve --reviewer human:mrm@bank.example
+```
+
+The graph is **Monitor → Investigator → Drafter → Human gate**:
+
+- **Monitor** reads the day's metrics + trend and decides which breaches are
+  *material* (red always; amber only at/above a floor or on a rising trend).
+- **Investigator** re-derives the shift **direction** straight from the
+  band-wise PSI breakdown, relates it to the 0.85 decision threshold, and
+  **RAG-retrieves** the governing policy — every hit carries a `doc:section`
+  citation.
+- **Drafter** writes the four-part memo — finding · business implication
+  (cost type + rough size + stakeholder to route to) · policy basis *with
+  citations* · recommended action — for a non-technical Risk/Legal reader.
+- **Human gate** is a structural pause: the graph compiles with
+  `interrupt_before=["human_gate"]`, so **nothing proceeds without an explicit
+  approve/reject**. It never auto-approves.
+
+The materiality/direction decisions are deterministic (a control system
+shouldn't outsource "is this material?" to a stochastic model); the **LLM is
+used where language matters — the Drafter — behind a thin router** (`anthropic`
+/ `openai` / `offline`, swappable with one config change, keys from `.env`).
+With `ANTHROPIC_API_KEY` set and the real corpus in `docs/governance/`, the
+same command runs against Anthropic and Postgres unchanged. Every node's input,
+output, citations, and the human decision are written to an **append-only audit
+log** (`agent_runs` / `memos` / `decisions`, enforced by triggers). See
+[`docs/runbooks/agents.md`](docs/runbooks/agents.md).
+
+---
+
 ## 🧭 Design principles
 
 These are enforced, not aspirational — see [`CLAUDE.md`](CLAUDE.md) for the full contract.
@@ -243,8 +285,15 @@ pipeline/
   daily_drift.py     # daily governance metrics CLI
   baf_fairness.py    # BAF fairness audit (separate runnable)
   dags/              # Airflow DAGs (thin wrappers over the CLIs)
-agents/      # LangGraph agents (Monitor, Investigator, Drafter, human gate)   [Phase 3]
-rag/         # corpus loaders, indexers, retrievers, citation plumbing          [Phase 3]
+agents/
+  llm.py             # thin Anthropic/OpenAI/offline router
+  graph.py           # LangGraph Monitor->Investigator->Drafter->Human gate
+  nodes.py           # node logic (materiality, direction, RAG, memo)
+  audit.py           # append-only audit sink (Postgres + JSONL)
+  prompts/           # one readable prompt per agent
+rag/
+  corpus.py          # chunk governance docs into stable doc:section ids
+  retriever.py       # Haystack BM25 retrieval -> Citations
 backend/     # FastAPI service, audit log, human-gate endpoints                 [Phase 4]
 frontend/    # React dashboard                                                  [Phase 4]
 infra/       # Docker Compose, Postgres init.sql, Cloud Run deploy

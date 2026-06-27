@@ -26,13 +26,15 @@ def connect(dsn: str | None = None) -> Iterator:
 
 
 def apply_schema(dsn: str | None = None) -> None:
-    """Run `infra/sql/init.sql` against the target database.
+    """Run every `infra/sql/*.sql` file against the target database, in order.
 
     Idempotent (every CREATE is IF NOT EXISTS); safe to call from one-off
-    setup scripts or `daily_drift.py --init`.
+    setup scripts or `daily_drift.py --init`. Files are applied in sorted
+    filename order, so `init.sql` (00/base tables) precedes `agents.sql`.
     """
-    sql_path = config.REPO_ROOT / "infra" / "sql" / "init.sql"
-    sql = sql_path.read_text()
+    sql_dir = config.REPO_ROOT / "infra" / "sql"
+    sql_files = sorted(sql_dir.glob("*.sql"))
     with connect(dsn) as conn, conn.cursor() as cur:
-        cur.execute(sql)
+        for path in sql_files:
+            cur.execute(path.read_text())
         conn.commit()

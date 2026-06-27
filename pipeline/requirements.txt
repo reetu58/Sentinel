@@ -6,4 +6,10 @@ xgboost>=2.0
 confluent-kafka>=2.3
 # Phase 2 — Postgres connector for the metrics + audit log layer.
 psycopg[binary]>=3.2
+# Phase 3 — RAG (Haystack BM25) + agent graph (LangGraph) + LLM router.
+haystack-ai>=2.0
+langgraph>=0.2
+langchain-core>=0.3
+anthropic>=0.40
+openai>=1.50
 pytest>=8.0

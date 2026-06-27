@@ -189,17 +189,27 @@ def direction(result: PSIResult) -> str:
     """
     if result.band == "stable":
         return "stable"
+    return direction_from_deltas([b.signed_delta for b in result.bins], result.band)
 
-    deltas = np.array([b.signed_delta for b in result.bins], dtype="float64")
+
+def direction_from_deltas(signed_deltas: Sequence[float], band_name: str) -> str:
+    """Localize the shift from per-bin signed deltas (actual% - expected%).
+
+    Shared by the Phase 2 `direction()` and the Phase 3 Investigator, which
+    re-derives the direction straight from the persisted band-wise breakdown.
+    Splits the ordered bins into thirds and returns the third that gained the
+    most mass: `low` / `mid` / `high` (or `stable` for a stable band).
+    """
+    if band_name == "stable":
+        return "stable"
+    deltas = np.asarray(list(signed_deltas), dtype="float64")
     n = len(deltas)
     if n < 3:
         return "mid"
-
     third = n // 3
     low_mass = deltas[:third].sum()
     high_mass = deltas[-third:].sum()
     mid_mass = deltas[third : n - third].sum()
-
     masses = {"low": float(low_mass), "mid": float(mid_mass), "high": float(high_mass)}
     return max(masses, key=masses.get)
 
