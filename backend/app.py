@@ -15,6 +15,7 @@ All state is server-side. Secrets (LLM keys) come from .env via the router.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -159,3 +160,12 @@ def _normalize_audit(r: dict) -> dict:
         "reviewer": r.get("reviewer"),
         "payload": r.get("payload") or {},
     }
+
+
+# Serve the built React dashboard as static files when STATIC_DIR is set (the
+# single-service Cloud Run deploy). Mounted LAST so the /api/* routes above
+# always take precedence. Locally you instead run `npm run dev` (vite proxy).
+if config.STATIC_DIR and Path(config.STATIC_DIR).is_dir():
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/", StaticFiles(directory=config.STATIC_DIR, html=True), name="static")

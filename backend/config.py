@@ -38,3 +38,8 @@ DEMO_CORPUS_DIR: Path = REPO_ROOT / "rag" / "tests" / "fixtures" / "governance"
 
 #: Demo breach fixture (a real RED high-side breach computed via the PSI math).
 DEMO_BREACH_FILE: Path = REPO_ROOT / "agents" / "tests" / "fixtures" / "breach_red.json"
+
+#: Built React dashboard to serve as static files (single-service deploy). In
+#: the Docker image the frontend build is copied to /app/static and this points
+#: at it; locally it's usually unset (you run `npm run dev` with the vite proxy).
+STATIC_DIR: str = os.getenv("STATIC_DIR", "")

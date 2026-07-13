@@ -1,8 +1,17 @@
-# Sentinel backend (Phase 4) — FastAPI service + agent-graph orchestration.
-# Builds on pipeline/requirements.txt (pandas, langgraph, anthropic, ...).
+# Sentinel backend (Phase 4/5) — self-sufficient for running the API image.
+# Deliberately does NOT pull the training/streaming stack (xgboost,
+# confluent-kafka, airflow): the serving container doesn't need them.
 fastapi>=0.110
 uvicorn[standard]>=0.29
 pydantic>=2.6
-# Persistent LangGraph checkpointer so the paused graph survives across the
-# (separate) trigger and approve/reject HTTP requests and process restarts.
+# Agent graph + RAG (imported by the API at request time)
+langgraph>=0.2
 langgraph-checkpoint-sqlite>=2.0
+langchain-core>=0.3
+haystack-ai>=2.0
+numpy>=1.26
+# LLM providers (used only when a key is set; router falls back to offline)
+anthropic>=0.40
+openai>=1.50
+# Postgres (used only in SENTINEL_BACKEND_MODE=postgres; imported lazily)
+psycopg[binary]>=3.2

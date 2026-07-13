@@ -9,52 +9,91 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![Data: public only](https://img.shields.io/badge/data-public%20only-brightgreen.svg)](docs/runbooks/data.md)
-[![Phase 1: streaming spine](https://img.shields.io/badge/phase%201-streaming%20spine%20✓-success.svg)](#-project-status)
-[![Phase 2: drift + fairness](https://img.shields.io/badge/phase%202-drift%20+%20fairness%20✓-success.svg)](#-project-status)
-[![Phase 3: agents + RAG](https://img.shields.io/badge/phase%203-agents%20+%20RAG%20✓-success.svg)](#-project-status)
-[![Phase 4: backend + dashboard](https://img.shields.io/badge/phase%204-backend%20+%20dashboard%20✓-success.svg)](#-project-status)
+[![Deploy: Cloud Run](https://img.shields.io/badge/deploy-Cloud%20Run-4285F4.svg)](docs/runbooks/deploy.md)
 [![Human-in-the-loop](https://img.shields.io/badge/actions-human%20approved-orange.svg)](#-design-principles)
+
+**[Live demo](#) · [3-minute walkthrough](docs/DEMO_SCRIPT.md) · [Scoping brief](docs/research/Sentinel_Scoping_Brief.md)**
+
+<sub>Replace the live-demo link with your Cloud Run URL after deploying — see [docs/runbooks/deploy.md](docs/runbooks/deploy.md).</sub>
 
 </div>
 
 ---
 
-## The one-paragraph pitch
+> **This README is an annotated case file.** It reads top-to-bottom as the story
+> of one problem: a fraud model that quietly degrades, what that costs, the
+> regulation that governs it, and a working prototype of the controls the newest
+> guidance demands. Code and runbooks are linked at each step.
 
-In **April 2026, SR 26-2 replaced SR 11-7** and deliberately placed generative and
-agentic AI **outside** US model-risk guidance — while keeping traditional ML fraud
-models **fully in scope**. That leaves banks owning the riskiest AI (agents that act)
-with no regulatory template, and still on the hook for the classical models those
-agents would touch. **Sentinel is built directly on that fault line:** it monitors an
-in-scope traditional fraud model **and** demonstrates the exact controls the carve-out
-now demands of agentic systems — scoped agent actions, mandatory human approval, and an
-immutable, policy-cited audit trail.
+## The problem, in one paragraph
+
+A production fraud model is never static — the fraud it hunts adapts, and the
+customer population shifts under it. When the model drifts, it fails in **two
+opposite and equally expensive directions**, and a single headline "drift"
+number hides which one you're bleeding from:
+
+| Drift direction | What's happening | The cost | Route to |
+| --- | --- | --- | --- |
+| **High-side** shift | model over-flagging | **false declines** — lost revenue, customer friction, investigation load | Product / Sales / CX |
+| **Low-side** shift | under-detection | **fraud losses + regulatory exposure** | Risk / Finance / Legal |
+| **Mid / threshold** shift | unstable at the decision boundary | **decision instability** | Ops / Finance planning |
+
+Catching this early, every day, and turning it into a *routed business decision*
+— not just a dashboard number — is slow, manual model-risk work today. Sentinel
+automates the analysis and the policy lookup, and keeps a human firmly in charge
+of the decision.
+
+## The thesis (why *now*)
+
+In **April 2026, SR 26-2 replaced SR 11-7** and deliberately placed generative
+and agentic AI **outside** US model-risk guidance — calling them "novel and
+rapidly evolving" — while keeping traditional ML fraud and credit models **fully
+in scope**. That creates a fault line:
+
+- The **classical model** Sentinel monitors is squarely *in* scope — it needs
+  the rigorous, daily, band-wise monitoring model-risk teams have always owed.
+- The **agentic system** doing the monitoring is in the *carve-out* — banks must
+  govern it under their own practices, with no regulatory template.
+
+**Sentinel is built directly on that fault line.** It monitors an in-scope
+traditional fraud model **and** demonstrates the exact controls the carve-out now
+demands of agentic systems: **defined agent actions, mandatory human approval,
+and an immutable, policy-cited audit trail.**
 
 > Built solo, end-to-end, on **public data only**, and deployed live.
 
 ---
 
-## Why it matters (the business case)
+## Industry context
 
-A fraud model that quietly degrades is expensive in **two opposite directions**, and a
-single drift number hides which one you're bleeding from:
+Sentinel is a prototype of a frontier that regulators and banks are actively
+moving toward.
 
-| Drift direction | What's happening | The cost | Route to |
-| --- | --- | --- | --- |
-| **High-side** shift | model over-flagging | **false declines** — lost revenue, friction, investigation load | Product / Sales / CX |
-| **Low-side** shift | under-detection | **fraud losses + regulatory exposure** | Risk / Finance / Legal |
-| **Mid / threshold** shift | unstable at the decision boundary | **decision instability** | Ops / Finance planning |
+- **SR 26-2 (April 2026)** superseded **SR 11-7 (2011)**, the foundational US
+  model-risk guidance. It keeps traditional ML models (fraud, credit) in scope
+  and pushes generative/agentic AI *out* of formal model-risk scope — banks own
+  that governance themselves. Sentinel sits on both sides at once.
+- **EU AI Act** — credit/fraud decisioning that affects consumers is **high-risk**,
+  with obligations for risk management, data governance & bias monitoring, human
+  oversight, and accuracy/robustness monitoring. Full high-risk enforcement lands
+  **August 2026**. Sentinel's fairness audit and human gate map directly to these.
+- **The agentic-governance frontier** — banks are piloting **agent-proposes /
+  human-approves** patterns exactly like this one, and bodies such as the FSB have
+  flagged the systemic angle of **AI monitoring AI**. The open question everyone
+  is circling is: *what controls make an agent that touches a production model
+  safe?* Sentinel's answer is a worked example — scoped actions, a hard human
+  gate, and an append-only audit trail.
 
-Catching this early, daily, and turning it into a routed business decision is slow,
-manual work today. Sentinel automates the **analysis and the policy lookup** — and keeps
-the human firmly in charge of the **decision**.
+The point isn't that Sentinel *is* production model governance. It's that every
+design choice is a concrete, inspectable take on a control the industry is still
+writing the rules for.
 
 ---
 
-## Architecture
+## Architecture — and how each piece maps to a real governance workflow
 
-A real build, not a simulation — Kafka, Airflow, and a live deployment are first-class,
-not future work.
+A real build, not a simulation: Kafka, a daily orchestrated job, Postgres,
+agents, and a live-deployed app.
 
 ```
    PaySim / IEEE-CIS CSV  (public data)
@@ -69,7 +108,7 @@ not future work.
    Daily Airflow DAG
      • PSI on model score — read BAND-WISE, not just the aggregate
      • CSI per feature vs a frozen baseline
-     • precision / recall / FPR + fairness gaps
+     • precision / recall / FPR + fairness gaps (Bank Account Fraud Suite)
             │
             ▼
    Postgres  (metrics + immutable audit log)
@@ -79,280 +118,170 @@ not future work.
      Monitor ──► Investigator (RAG, cited) ──► Drafter ──► 🧑 Human gate
             │
             ▼
-   FastAPI backend  ◄──►  React dashboard
+   FastAPI backend  ◄──►  React dashboard        (one Cloud Run service)
             │
             ▼
    Docker ──► GCP Cloud Run  (public URL)
 ```
 
+| Pipeline stage | Real model-governance activity it stands in for |
+| --- | --- |
+| Kafka spine + XGBoost scoring | The **deployed model in production**, scoring a live transaction stream. |
+| Frozen baseline + daily PSI/CSI | **Ongoing monitoring** vs. a versioned reference — the core SR 26-2 / SR 11-7 duty. |
+| Band-wise PSI read | The nuance a good validator insists on: *where* did the score move, not just *how much* — a shift at the decision boundary is the dangerous one. |
+| FPR + fairness slices (BAF) | **Outcome analysis** and **disparate-impact / bias monitoring** (EU AI Act high-risk). |
+| Trend detector | **Early warning** — escalate a sustained rise *before* the hard threshold breach. |
+| Monitor → Investigator → Drafter | The analyst workflow: triage materiality → diagnose direction & pull policy → write the memo. |
+| RAG with `doc:section` citations | **Traceability** — every claim is grounded in a specific governance passage. |
+| Human gate | **Mandatory human approval** — the agent proposes; a person disposes. |
+| Append-only audit log | The **immutable activity record** the carve-out demands. |
+
+Full stack: Python · Kafka/Redpanda · Airflow · Postgres · XGBoost · LangGraph ·
+Haystack (BM25 RAG) · Anthropic + OpenAI via a thin router · FastAPI · React ·
+Docker · GCP Cloud Run.
+
 ---
 
-## 🚦 Project status
+## What it looks like
 
-Sentinel is being built in honest, verifiable phases. This table is the source of truth
-for what actually runs today.
+![Sentinel dashboard schematic](docs/screenshots/dashboard-schematic.svg)
+
+<sub>Schematic of the dashboard using real demo values. For real captures, run
+locally or open the live demo — see [docs/screenshots/](docs/screenshots/).</sub>
+
+### A sample cited memo (real output, verbatim)
+
+When a RED breach fires, the Drafter produces this — plain English, for a
+non-technical Risk/Legal reader, every policy claim carrying a `doc:section`
+citation from the RAG layer:
+
+```
+# Model Risk Alert — score PSI (RED)
+
+## (a) Finding
+The model's score distribution has shifted toward the high (over-flagging) end
+of the score range. PSI = 0.4673 (investigate / RED), read band-wise: the
+largest mass gain is in bin [0.9, inf) (+11.4 pts).
+
+## (b) Business implication
+Mechanism: the model is over-flagging. Cost type: false declines (lost revenue,
+friction, investigation load). Rough size: on ~48,213 scored transactions/day
+at FPR 0.058, a high-side shift increases false declines — size with Finance as
+incremental declines × (avg basket value + handling cost). Route to: Product /
+Sales / CX.
+
+## (c) Policy basis
+Grounded in: [SR_26-2:III.B] Population stability and thresholds; [ModelVal:3]
+Monitoring thresholds; [SR_26-2:III.A] Monitoring expectations.
+
+## (d) Recommended action
+Review the 0.85 decision threshold against the shifted distribution and convene
+model risk management with Product / Sales / CX. This is a recommendation
+pending human approval — Sentinel takes no action itself.
+```
+
+---
+
+## Run it
+
+### Fastest: the whole app in demo mode (no DB, no API key)
+
+```bash
+pip install -r pipeline/requirements.txt -r backend/requirements.txt
+SENTINEL_BACKEND_MODE=demo python -m uvicorn backend.app:app --port 8000   # backend
+cd frontend && npm install && npm run dev                                  # dashboard → :5173
+```
+
+Trigger a RED breach → watch the agent draft a cited memo → approve → see the
+audit log update. Walkthrough: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md).
+
+### Deploy the live demo (one Cloud Run service)
+
+```bash
+gcloud run deploy sentinel --source . --region us-central1 \
+  --allow-unauthenticated --set-env-vars SENTINEL_BACKEND_MODE=demo
+```
+
+A multi-stage `Dockerfile` builds the React app and the FastAPI backend serves
+it — one image, one URL, **no secrets baked in** (keys/DSNs come from Cloud Run
+env / Secret Manager). Postgres, Kafka, and Airflow run *outside* Cloud Run; the
+hosted demo needs none of them. Full instructions incl. Cloud SQL + real-LLM
+options: [docs/runbooks/deploy.md](docs/runbooks/deploy.md).
+
+### Run the real pipeline (Phases 1–3)
+
+The streaming spine, daily metrics, and agent graph each have a runbook:
+[data](docs/runbooks/data.md) · [drift & fairness](docs/runbooks/drift.md) ·
+[agents & RAG](docs/runbooks/agents.md) · [dashboard](docs/runbooks/dashboard.md).
+Tests: `python -m pytest -q` (49 passing, offline).
+
+---
+
+## 🚦 Build status
 
 | Phase | Scope | Status |
 | --- | --- | --- |
-| **1 — Streaming spine** | Redpanda + Postgres via Compose · shared feature module · XGBoost baseline (PR-AUC, imbalance-aware) · producer → `transactions` · consumer → `scored-txns` with label | ✅ **Built** |
-| **2 — Daily drift, trend & fairness** | Frozen reference baseline · band-wise PSI + per-feature CSI + precision/recall/FPR · sustained-rise trend detector (early warning before RED) · BAF fairness audit (per-slice FPR + approval gaps) · Postgres schema + sink · daily CLI + Airflow DAG | ✅ **Built** |
-| **3 — Agents + RAG** | Haystack BM25 RAG over the governance corpus (`doc:section` citations) · LangGraph Monitor → Investigator → Drafter → human gate (interrupt-based pause) · thin Anthropic/OpenAI/offline LLM router · immutable append-only audit log (agent runs, memos, decisions) | ✅ **Built** |
-| **4 — Backend + dashboard** | FastAPI (health · queue · trigger · approve/reject · audit) over Postgres + the agent graph, with a SQLite checkpointer so the paused graph resumes across requests · React dashboard: health tiles, band-wise PSI chart, queue, copilot memo panel with Approve/Reject/Edit, audit trail (no client storage) | ✅ **Built** |
-| **5 — Deploy** | Docker → GCP Cloud Run, public URL | ⬜ Planned |
-
----
-
-## ⚡ Quickstart (Phase 1)
-
-**Prerequisites:** Docker, Python 3.11+.
-
-```bash
-# 1. install deps
-pip install -r pipeline/requirements.txt
-
-# 2. get data — drop the real Kaggle PaySim CSV at data/paysim.csv
-#    (https://www.kaggle.com/datasets/ealaxi/paysim1), OR generate a synthetic sample:
-python -m pipeline.sample_paysim --rows 200000 --out data/paysim.csv
-
-# 3. bring up the streaming spine (Redpanda + Console + Postgres)
-docker compose -f infra/docker-compose.yml up -d        # Console → http://localhost:8080
-
-# 4. train + freeze the XGBoost baseline
-python -m pipeline.train_model                          # → models/fraud_xgb_v1.pkl
-
-# 5. start the scorer (terminal A)
-python -m pipeline.consumer
-
-# 6. replay transactions through Kafka (terminal B)
-python -m pipeline.producer --limit 5000 --rate 200
-
-# 7. watch scored messages land:  Redpanda Console → Topics → scored-txns → Messages
-```
-
-A scored message carries the score, the thresholded flag, the model version, **and the
-ground-truth label** (so downstream metrics can compute precision/recall/FPR):
-
-```json
-{
-  "txn_id": "paysim-000000142",
-  "fraud_score": 0.999984,
-  "is_fraud_pred": 1,
-  "label": 1,
-  "model_version": "v1",
-  "type": "TRANSFER",
-  "amount": 54.28,
-  "scored_at": "2026-06-21T10:38:24Z"
-}
-```
-
-Run the tests (no broker or download needed — they use a synthetic sample):
-
-```bash
-python -m pytest pipeline/tests/ -q
-```
-
----
-
-## ⚡ Phase 2 — daily drift, trend & fairness
-
-Once Phase 1 is running and `scored-txns` is producing events, layer in the
-governance metrics:
-
-```bash
-# 1. sink scored events into Postgres for daily-batch querying
-python -m pipeline.sink_postgres &
-
-# 2. compute one day's metrics (PSI / CSI / health / trend) and write to Postgres
-python -m pipeline.daily_drift --date 2026-06-21
-
-# 3. fairness audit on the Bank Account Fraud Suite (separate runnable)
-#    place the CSV at data/baf.csv first (public, never committed; see data.md)
-python -m pipeline.baf_fairness --slice customer_age
-```
-
-Each daily metric row carries the **semantic band** (`stable`/`monitor`/`investigate`),
-the **visual color** (`GREEN`/`AMBER`/`RED`), the **direction** of the score
-shift (`high`/`low`/`mid`/`stable` — what the Phase 3 Drafter agent will route
-on), and a **trend status** flagging a sustained PSI creep *before* it crosses
-the RED threshold. The band-wise per-bin breakdown (expected % / actual % /
-signed delta / contribution) lands in `psi_bins`, joined to `daily_metrics` by
-foreign key, so the Phase 4 dashboard can render it directly.
-
-The Phase 1 CLI is the primary entry point; an Airflow DAG
-(`pipeline/dags/daily_drift_dag.py`) is checked in as a thin wrapper and can
-be enabled with `docker compose --profile airflow up -d` (then
-<http://localhost:8081>). See [`docs/runbooks/drift.md`](docs/runbooks/drift.md)
-for the full schema, sample queries, and tuning knobs.
-
----
-
-## ⚡ Phase 3 — agents, RAG & the human gate
-
-The copilot turns a drift breach into a cited, human-gated memo. It runs fully
-**offline** for demos/CI (deterministic composer + BM25 retrieval + JSONL
-audit) — no API key or database required:
-
-```bash
-python -m agents.run \
-  --breach-file agents/tests/fixtures/breach_red.json \
-  --corpus-dir rag/tests/fixtures/governance \
-  --offline \
-  --decision approve --reviewer human:mrm@bank.example
-```
-
-The graph is **Monitor → Investigator → Drafter → Human gate**:
-
-- **Monitor** reads the day's metrics + trend and decides which breaches are
-  *material* (red always; amber only at/above a floor or on a rising trend).
-- **Investigator** re-derives the shift **direction** straight from the
-  band-wise PSI breakdown, relates it to the 0.85 decision threshold, and
-  **RAG-retrieves** the governing policy — every hit carries a `doc:section`
-  citation.
-- **Drafter** writes the four-part memo — finding · business implication
-  (cost type + rough size + stakeholder to route to) · policy basis *with
-  citations* · recommended action — for a non-technical Risk/Legal reader.
-- **Human gate** is a structural pause: the graph compiles with
-  `interrupt_before=["human_gate"]`, so **nothing proceeds without an explicit
-  approve/reject**. It never auto-approves.
-
-The materiality/direction decisions are deterministic (a control system
-shouldn't outsource "is this material?" to a stochastic model); the **LLM is
-used where language matters — the Drafter — behind a thin router** (`anthropic`
-/ `openai` / `offline`, swappable with one config change, keys from `.env`).
-With `ANTHROPIC_API_KEY` set and the real corpus in `docs/governance/`, the
-same command runs against Anthropic and Postgres unchanged. Every node's input,
-output, citations, and the human decision are written to an **append-only audit
-log** (`agent_runs` / `memos` / `decisions`, enforced by triggers). See
-[`docs/runbooks/agents.md`](docs/runbooks/agents.md).
-
----
-
-## ⚡ Phase 4 — backend + dashboard (the loop, made usable)
-
-A FastAPI backend over the Phase 2 metrics and the Phase 3 agent graph, and a
-React dashboard that drives the whole human-in-the-loop. Runs in **demo mode**
-with no database and no API key:
-
-```bash
-# backend
-pip install -r pipeline/requirements.txt -r backend/requirements.txt
-SENTINEL_BACKEND_MODE=demo python -m uvicorn backend.app:app --port 8000
-
-# dashboard (separate terminal)
-cd frontend && npm install && npm run dev      # http://localhost:5173
-```
-
-The dashboard shows **health tiles** (PSI band, FPR, trend, worst fairness
-gap), a **band-wise PSI chart** (expected vs actual mass per score bin — the
-differentiator a single number hides), the **investigation queue**, a
-**copilot panel** rendering the four-part cited memo with **Approve / Reject /
-Edit**, and the **audit trail**. The loop: a RED breach appears → *Trigger
-investigation* → the graph pauses at the human gate with the drafted memo →
-*Approve* resumes the graph and appends the decision to the immutable audit
-log. **Nothing ships without that approval**, and all state is server-side
-(no `localStorage`/`sessionStorage`). API:
-
-| `GET /api/health` · `GET /api/investigations` · `POST /api/investigations` · `GET /api/investigations/{id}` · `POST …/approve` · `POST …/reject` · `GET /api/audit` |
-|---|
-
-See [`docs/runbooks/dashboard.md`](docs/runbooks/dashboard.md).
+| **1 — Streaming spine** | Redpanda + Postgres · shared feature module · XGBoost baseline (PR-AUC, imbalance-aware) · producer → `transactions` · consumer → `scored-txns` with label | ✅ |
+| **2 — Daily drift, trend & fairness** | Frozen baseline · band-wise PSI + per-feature CSI + precision/recall/FPR · sustained-rise trend detector · BAF fairness audit · Postgres schema + sink · daily CLI + Airflow DAG | ✅ |
+| **3 — Agents + RAG** | Haystack BM25 RAG (`doc:section` citations) · LangGraph Monitor → Investigator → Drafter → human gate · thin Anthropic/OpenAI/offline router · append-only audit log | ✅ |
+| **4 — Backend + dashboard** | FastAPI (health · queue · trigger · approve/reject · audit) with a SQLite checkpointer so the paused graph resumes across requests · React dashboard, all state server-side | ✅ |
+| **5 — Ship it** | One-container Docker build · Cloud Run deploy · annotated case-file README · demo script · pre-public safety pass | ✅ |
 
 ---
 
 ## 🧭 Design principles
 
-These are enforced, not aspirational — see [`CLAUDE.md`](CLAUDE.md) for the full contract.
+Enforced, not aspirational — see [`CLAUDE.md`](CLAUDE.md) for the full contract.
 
-- **One feature module, train and serve.** `pipeline/features.py` is the single source of
-  truth, imported by both training and scoring. Train/serve skew is *exactly* the failure
-  Sentinel exists to catch — so the model that catches it must never commit it. A parity
-  test asserts batch and single-record featurization agree byte-for-byte.
-- **PSI read band-wise.** A middling aggregate PSI can hide a dangerous shift right at the
-  decision boundary. Sentinel reads per-bin direction, not just the headline number.
-- **Every agent output is a business implication.** Name the cost type, a rough size, and
+- **One feature module, train and serve.** `pipeline/features.py` is the single
+  source of truth. Train/serve skew is *exactly* the failure Sentinel exists to
+  catch — so the model that catches it must never commit it. A parity test
+  asserts batch and single-record featurization agree byte-for-byte.
+- **PSI read band-wise.** A middling aggregate can hide a dangerous shift at the
+  decision boundary. Sentinel reads per-bin direction, not the headline number.
+- **Deterministic control logic; LLM only where language matters.** Materiality
+  and drift *direction* are computed, not asked of a stochastic model. The LLM
+  drafts prose — behind a router that swaps Anthropic / OpenAI / offline with one
+  config change.
+- **Every agent output is a business implication** — cost type, rough size, and
   the stakeholder to route to — never a bare statistic.
-- **Every decision cites its policy source** (`doc:section`) and writes to an **immutable
-  audit log**, with the model version attached.
-- **Nothing side-effecting happens without human approval.** The gate is not optional and
-  not a checkbox an agent can flip.
-
----
-
-## 📚 Governance corpus (for RAG)
-
-| Document | Role |
-| --- | --- |
-| **SR 26-2** | Primary, current guidance (2026) |
-| **SR 11-7** | Historical predecessor — cited explicitly as superseded |
-| **EU AI Act** | High-risk obligations (full enforcement Aug 2026); fairness/bias angle |
-| **NIST AI RMF** | Risk-management framework |
-| *Synthetic model-validation report* | Clearly labeled synthetic |
+- **Every decision cites its policy source** (`doc:section`) and writes to an
+  **immutable, append-only audit log**, model version attached.
+- **Nothing side-effecting happens without human approval.** The gate is a
+  structural pause in the graph, not a checkbox an agent can flip.
 
 ---
 
 ## 🔒 Data policy
 
-**Public datasets only.** Sentinel uses **PaySim** (the streaming spine), the **Bank
-Account Fraud Suite** (NeurIPS 2022 — protected attributes for the fairness audit), and
-optionally **IEEE-CIS**. **Real bank data is confidential and is never used in this
-project.** `data/` and `models/` are gitignored; raw data and trained binaries are never
-committed and must be re-derived from the documented public sources
-(see [`docs/runbooks/data.md`](docs/runbooks/data.md)).
-
----
-
-## 🗂️ Repository layout
-
-```
-pipeline/
-  features.py        # SINGLE shared feature module (train & serve)
-  train_model.py     # XGBoost baseline + frozen reference baseline snapshot
-  producer.py        # PaySim -> transactions topic
-  consumer.py        # transactions -> scored-txns (with label)
-  scoring.py         # broker-free serving path + schema-drift guard
-  drift.py           # PSI / CSI / banding / direction inference
-  health.py          # precision / recall / FPR + per-slice fairness gaps
-  baseline.py        # frozen reference distribution captured at training
-  trend.py           # sustained-rise early warning
-  sink_postgres.py   # scored-txns -> Postgres
-  daily_drift.py     # daily governance metrics CLI
-  baf_fairness.py    # BAF fairness audit (separate runnable)
-  dags/              # Airflow DAGs (thin wrappers over the CLIs)
-agents/
-  llm.py             # thin Anthropic/OpenAI/offline router
-  graph.py           # LangGraph Monitor->Investigator->Drafter->Human gate
-  nodes.py           # node logic (materiality, direction, RAG, memo)
-  audit.py           # append-only audit sink (Postgres + JSONL)
-  prompts/           # one readable prompt per agent
-rag/
-  corpus.py          # chunk governance docs into stable doc:section ids
-  retriever.py       # Haystack BM25 retrieval -> Citations
-backend/
-  app.py             # FastAPI routes (health/queue/trigger/approve/reject/audit)
-  service.py         # agent-graph orchestration + SQLite checkpointer
-  repository.py      # Postgres + demo data access behind one interface
-frontend/
-  src/components/    # HealthTiles, PsiBandChart, AlertQueue, CopilotPanel, AuditTrail
-  src/App.jsx        # wires the loop; all state server-side
-infra/       # Docker Compose, Postgres init.sql + agents.sql, Cloud Run deploy
-docs/        # research brief, ADRs, runbooks (data, drift), governance notes
-data/        # gitignored — public datasets, locally derived
-models/      # gitignored — trained artifacts + baseline sidecar, locally derived
-```
+**Public datasets only.** Sentinel uses **PaySim** (the streaming spine), the
+**Bank Account Fraud Suite** (NeurIPS 2022 — protected attributes for the
+fairness audit), and optionally **IEEE-CIS**. **Real bank data is confidential
+and is never used in this project** — and using public data *because* real data
+is confidential is itself a governance-aware signal. `data/` and `models/` are
+gitignored; raw data and trained binaries are never committed and must be
+re-derived from the documented public sources
+([docs/runbooks/data.md](docs/runbooks/data.md)).
 
 ---
 
 ## ⚠️ Honest scope and limits
 
-Sentinel is a **prototype, not production**. On public/synthetic data the results are
-**illustrative, not deployable** — e.g. the synthetic PaySim sample is deliberately clean
-and will show an unrealistically high PR-AUC; real PaySim lands lower. LLM drafts are
-RAG-grounded with citations to limit fabrication. Sentinel **assists** a human model-risk
-manager — it never self-heals or acts autonomously.
+Sentinel is a **prototype, not production**.
+
+- On public/synthetic data, results are **illustrative, not deployable** — e.g.
+  the synthetic PaySim sample is deliberately clean and shows an unrealistically
+  high PR-AUC; real PaySim lands lower.
+- The streaming/orchestration layer is a deliberate **thin-but-real** learning
+  build — real Kafka, a real daily job, a real deployment, but minimal.
+- LLM drafts are **RAG-grounded with citations** to limit fabrication; the
+  offline drafter is deterministic.
+- Sentinel **assists** a human model-risk manager — it **never self-heals or
+  acts autonomously**. Every consequential step is gated and audited.
 
 ---
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE). Canonical spec in [`CLAUDE.md`](CLAUDE.md); positioning
-brief in [`docs/research/Sentinel_Scoping_Brief.md`](docs/research/Sentinel_Scoping_Brief.md).
+MIT — see [`LICENSE`](LICENSE). Canonical spec: [`CLAUDE.md`](CLAUDE.md).
+Positioning brief: [`docs/research/Sentinel_Scoping_Brief.md`](docs/research/Sentinel_Scoping_Brief.md).
