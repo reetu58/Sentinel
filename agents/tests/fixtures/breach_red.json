@@ -1,0 +1,117 @@
+{
+  "run_date": "2026-06-21",
+  "model_version": "v1",
+  "score_psi": {
+    "value": 0.46729,
+    "band": "investigate",
+    "color": "RED",
+    "direction": "high",
+    "bins": [
+      {
+        "label": "[-inf, 0.1)",
+        "expected_pct": 0.1,
+        "actual_pct": 0.027273,
+        "signed_delta": -0.072727,
+        "contribution": 0.094491
+      },
+      {
+        "label": "[0.1, 0.2)",
+        "expected_pct": 0.1,
+        "actual_pct": 0.031818,
+        "signed_delta": -0.068182,
+        "contribution": 0.078076
+      },
+      {
+        "label": "[0.2, 0.3)",
+        "expected_pct": 0.1,
+        "actual_pct": 0.036364,
+        "signed_delta": -0.063636,
+        "contribution": 0.064373
+      },
+      {
+        "label": "[0.3, 0.4)",
+        "expected_pct": 0.1,
+        "actual_pct": 0.045455,
+        "signed_delta": -0.054545,
+        "contribution": 0.043006
+      },
+      {
+        "label": "[0.4, 0.5)",
+        "expected_pct": 0.1,
+        "actual_pct": 0.072727,
+        "signed_delta": -0.027273,
+        "contribution": 0.008685
+      },
+      {
+        "label": "[0.5, 0.6)",
+        "expected_pct": 0.1,
+        "actual_pct": 0.090909,
+        "signed_delta": -0.009091,
+        "contribution": 0.000866
+      },
+      {
+        "label": "[0.6, 0.7)",
+        "expected_pct": 0.1,
+        "actual_pct": 0.136364,
+        "signed_delta": 0.036364,
+        "contribution": 0.011278
+      },
+      {
+        "label": "[0.7, 0.8)",
+        "expected_pct": 0.1,
+        "actual_pct": 0.163636,
+        "signed_delta": 0.063636,
+        "contribution": 0.031339
+      },
+      {
+        "label": "[0.8, 0.9)",
+        "expected_pct": 0.1,
+        "actual_pct": 0.181818,
+        "signed_delta": 0.081818,
+        "contribution": 0.048914
+      },
+      {
+        "label": "[0.9, inf)",
+        "expected_pct": 0.1,
+        "actual_pct": 0.213636,
+        "signed_delta": 0.113636,
+        "contribution": 0.086261
+      }
+    ]
+  },
+  "feature_csi": [
+    {
+      "feature": "amount",
+      "value": 0.082,
+      "band": "stable"
+    },
+    {
+      "feature": "errorBalanceOrig",
+      "value": 0.171,
+      "band": "monitor"
+    },
+    {
+      "feature": "type_TRANSFER",
+      "value": 0.044,
+      "band": "stable"
+    }
+  ],
+  "health": {
+    "n": 48213,
+    "positives": 612,
+    "precision": 0.41,
+    "recall": 0.93,
+    "fpr": 0.058,
+    "f1": 0.57
+  },
+  "trend": {
+    "status": "rising",
+    "slope_per_day": 0.061,
+    "signals": [
+      "monotone_rising",
+      "slope_positive"
+    ],
+    "window_size": 4,
+    "latest_value": 0.46729
+  }
+}

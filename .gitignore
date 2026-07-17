@@ -17,6 +17,12 @@ models/
 *.bin
 *.safetensors
 
+# --- Governance corpus (user-placed; may be large/copyrighted PDFs) ---
+# Keep the explainer README and the synthetic test fixtures; ignore the rest.
+docs/governance/*
+!docs/governance/README.md
+# (synthetic stand-ins live under rag/tests/fixtures/governance/ and ARE tracked)
+
 # --- Secrets / credentials ---
 .env
 .env.*

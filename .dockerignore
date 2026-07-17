@@ -1,0 +1,30 @@
+# Keep the build context small and free of anything sensitive.
+.git/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Never ship data, models, or local artifacts.
+data/
+models/
+*.csv
+*.parquet
+*.pkl
+*.sqlite
+*.jsonl
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Frontend build inputs we don't need in context (rebuilt in-stage).
+frontend/node_modules/
+frontend/dist/
+
+# Docs aren't needed in the runtime image. NOTE: tests/ dirs ARE kept — demo
+# mode reads its fixtures (agents/tests/fixtures/breach_red.json and the
+# synthetic corpus under rag/tests/fixtures/governance/).
+docs/

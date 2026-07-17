@@ -71,7 +71,9 @@ services:
       - postgres-data:/var/lib/postgresql/data
       # Applied on FIRST boot only — subsequent restarts skip it. Re-applying
       # is idempotent (every CREATE is IF NOT EXISTS) if you exec into it.
+      # Order matters: init (base tables + audit_log) then agents (memos etc).
       - ./sql/init.sql:/docker-entrypoint-initdb.d/01-sentinel-init.sql:ro
+      - ./sql/agents.sql:/docker-entrypoint-initdb.d/02-sentinel-agents.sql:ro
 
   # Airflow — daily drift DAG scheduler. Opt-in (heavy image); enable with
   # `--profile airflow`. Uses `airflow standalone` so scheduler + webserver
