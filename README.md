@@ -10,12 +10,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![Data: public only](https://img.shields.io/badge/data-public%20only-brightgreen.svg)](docs/runbooks/data.md)
-[![Deploy: Cloud Run](https://img.shields.io/badge/deploy-Cloud%20Run-4285F4.svg)](docs/runbooks/deploy.md)
+[![Live demo](https://img.shields.io/badge/live%20demo-online-brightgreen.svg)](https://sentinel-g6gw.onrender.com/)
+[![Deploy: Docker / Cloud Run / Render](https://img.shields.io/badge/deploy-Docker%20·%20Cloud%20Run%20·%20Render-4285F4.svg)](docs/runbooks/deploy.md)
 [![Human-in-the-loop](https://img.shields.io/badge/actions-human%20approved-orange.svg)](#-design-principles)
 
-**[Live demo](#) · [3-minute walkthrough](docs/DEMO_SCRIPT.md) · [Scoping brief](docs/research/Sentinel_Scoping_Brief.md)**
+**[▶ Live demo](https://sentinel-g6gw.onrender.com/) · [3-minute walkthrough](docs/DEMO_SCRIPT.md) · [Scoping brief](docs/research/Sentinel_Scoping_Brief.md)**
 
-<sub>Replace the live-demo link with your Cloud Run URL after deploying — see [docs/runbooks/deploy.md](docs/runbooks/deploy.md).</sub>
+<sub>Hosted free on Render — if it's been idle it sleeps, so the first load may take ~30–60s to wake. See [docs/runbooks/deploy.md](docs/runbooks/deploy.md) to deploy your own.</sub>
 
 </div>
 
