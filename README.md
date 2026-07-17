@@ -10,12 +10,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![Data: public only](https://img.shields.io/badge/data-public%20only-brightgreen.svg)](docs/runbooks/data.md)
-[![Deploy: Cloud Run](https://img.shields.io/badge/deploy-Cloud%20Run-4285F4.svg)](docs/runbooks/deploy.md)
+[![Live demo](https://img.shields.io/badge/live%20demo-online-brightgreen.svg)](https://sentinel-g6gw.onrender.com/)
+[![Deploy on Render](https://img.shields.io/badge/deploy-Render%20(Docker)-46E3B7.svg)](docs/runbooks/deploy.md)
 [![Human-in-the-loop](https://img.shields.io/badge/actions-human%20approved-orange.svg)](#-design-principles)
 
-**[Live demo](#) · [3-minute walkthrough](docs/DEMO_SCRIPT.md) · [Scoping brief](docs/research/Sentinel_Scoping_Brief.md)**
+**[▶ Live demo](https://sentinel-g6gw.onrender.com/) · [3-minute walkthrough](docs/DEMO_SCRIPT.md) · [Scoping brief](docs/research/Sentinel_Scoping_Brief.md)**
 
-<sub>Replace the live-demo link with your Cloud Run URL after deploying — see [docs/runbooks/deploy.md](docs/runbooks/deploy.md).</sub>
+<sub>Hosted free on Render — if it's been idle it sleeps, so the first load may take ~30–60s to wake. See [docs/runbooks/deploy.md](docs/runbooks/deploy.md) to deploy your own.</sub>
 
 </div>
 
@@ -119,10 +120,10 @@ agents, and a live-deployed app.
      Monitor ──► Investigator (RAG, cited) ──► Drafter ──► 🧑 Human gate
             │
             ▼
-   FastAPI backend  ◄──►  React dashboard        (one Cloud Run service)
+   FastAPI backend  ◄──►  React dashboard        (one container service)
             │
             ▼
-   Docker ──► GCP Cloud Run  (public URL)
+   Docker ──► Render / Cloud Run  (one public URL)
 ```
 
 | Pipeline stage | Real model-governance activity it stands in for |
@@ -139,7 +140,7 @@ agents, and a live-deployed app.
 
 Full stack: Python · Kafka/Redpanda · Airflow · Postgres · XGBoost · LangGraph ·
 Haystack (BM25 RAG) · Anthropic + OpenAI via a thin router · FastAPI · React ·
-Docker · GCP Cloud Run.
+Docker · Render / Cloud Run.
 
 ---
 
@@ -196,18 +197,16 @@ cd frontend && npm install && npm run dev                                  # das
 Trigger a RED breach → watch the agent draft a cited memo → approve → see the
 audit log update. Walkthrough: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md).
 
-### Deploy the live demo (one Cloud Run service)
+### Deploy your own (one container service)
 
-```bash
-gcloud run deploy sentinel --source . --region us-central1 \
-  --allow-unauthenticated --set-env-vars SENTINEL_BACKEND_MODE=demo
-```
-
-A multi-stage `Dockerfile` builds the React app and the FastAPI backend serves
-it — one image, one URL, **no secrets baked in** (keys/DSNs come from Cloud Run
-env / Secret Manager). Postgres, Kafka, and Airflow run *outside* Cloud Run; the
-hosted demo needs none of them. Full instructions incl. Cloud SQL + real-LLM
-options: [docs/runbooks/deploy.md](docs/runbooks/deploy.md).
+The [live demo](https://sentinel-g6gw.onrender.com/) runs free on **Render** via
+the checked-in `render.yaml` — Dashboard → **New +** → **Blueprint** → pick the
+repo → **Apply**. A multi-stage `Dockerfile` builds the React app and the FastAPI
+backend serves it — one image, one URL, **no secrets baked in** (keys/DSNs come
+from the host's env / secret store). The same image runs on Cloud Run, Hugging
+Face Spaces, or Fly.io; Postgres, Kafka, and Airflow run *outside* the web host
+and the demo needs none of them. Full instructions (Render, Cloud Run, HF Spaces,
+plus real-LLM / Postgres options): [docs/runbooks/deploy.md](docs/runbooks/deploy.md).
 
 ### Run the real pipeline (Phases 1–3)
 
@@ -226,7 +225,7 @@ Tests: `python -m pytest -q` (49 passing, offline).
 | **2 — Daily drift, trend & fairness** | Frozen baseline · band-wise PSI + per-feature CSI + precision/recall/FPR · sustained-rise trend detector · BAF fairness audit · Postgres schema + sink · daily CLI + Airflow DAG | ✅ |
 | **3 — Agents + RAG** | Haystack BM25 RAG (`doc:section` citations) · LangGraph Monitor → Investigator → Drafter → human gate · thin Anthropic/OpenAI/offline router · append-only audit log | ✅ |
 | **4 — Backend + dashboard** | FastAPI (health · queue · trigger · approve/reject · audit) with a SQLite checkpointer so the paused graph resumes across requests · React dashboard, all state server-side | ✅ |
-| **5 — Ship it** | One-container Docker build · Cloud Run deploy · annotated case-file README · demo script · pre-public safety pass | ✅ |
+| **5 — Ship it** | One-container Docker build · deployed live on Render (Cloud Run-ready) · annotated case-file README · demo script · pre-public safety pass | ✅ |
 
 ---
 
