@@ -1,0 +1,18 @@
+# Render blueprint — one-click free deploy of the Sentinel demo.
+#
+# Render reads this file when you create a "Blueprint" from the repo. It builds
+# the root Dockerfile (React build + FastAPI serving it) and runs it as a single
+# free web service. Render injects $PORT automatically; the container's CMD
+# already binds it. No secrets here — demo mode needs no database or API key.
+#
+# Deploy: https://dashboard.render.com  ->  New +  ->  Blueprint  ->  pick this repo.
+services:
+  - type: web
+    name: sentinel
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/status
+    envVars:
+      - key: SENTINEL_BACKEND_MODE
+        value: demo

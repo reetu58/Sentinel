@@ -96,6 +96,52 @@ instance to populate `daily_metrics` / `psi_bins` / `fairness_metrics`, then the
 Cloud Run service serves them. The **demo mode** skips all of this and is the
 recommended target for a public URL.
 
+## Free hosting (no GCP, no credit card)
+
+The same root `Dockerfile` runs the whole demo anywhere that builds a container.
+Two genuinely-free options, both reusing the image as-is (demo mode → no DB, no
+API key). Vercel/Netlify are **not** a fit — they target static/serverless
+frontends, whereas Sentinel runs a long-lived FastAPI process + agent graph.
+
+### Option A — Render (easiest, one-click blueprint)
+
+A `render.yaml` blueprint is checked in at the repo root.
+
+1. Push the repo to GitHub (public is fine).
+2. Go to <https://dashboard.render.com> → **New +** → **Blueprint** → pick the
+   repo. Render reads `render.yaml`, builds the Dockerfile, and deploys a free
+   web service.
+3. It assigns a URL like `https://sentinel.onrender.com`. Paste it into the
+   README's `[Live demo]` link.
+
+Render injects `$PORT` automatically (the container's CMD already binds it) and
+runs a health check on `/api/status`. Note: the free tier **spins down when
+idle**, so the first hit after a quiet spell cold-starts in ~30–60 s — fine for
+a portfolio demo.
+
+### Option B — Hugging Face Spaces (great for an ML audience, permanent URL)
+
+1. Create a Space at <https://huggingface.co/new-space> → SDK: **Docker** →
+   **Blank**.
+2. In the Space's own `README.md` front matter, set the port the container
+   listens on:
+   ```yaml
+   ---
+   title: Sentinel
+   sdk: docker
+   app_port: 8080
+   ---
+   ```
+3. Push the Sentinel code to the Space's git remote (or link the GitHub repo).
+   HF builds the root Dockerfile and serves it at
+   `https://<user>-sentinel.hf.space`.
+
+The image already defaults to `SENTINEL_BACKEND_MODE=demo` and writes its
+ephemeral checkpoint/audit to `/tmp`, so no extra config is needed.
+
+> Other container hosts (Fly.io `fly launch`, Railway) work the same way — they
+> read the Dockerfile and expose `$PORT`.
+
 ## Notes
 
 - **No secrets in the image.** `.dockerignore` excludes `.env`, `data/`,
